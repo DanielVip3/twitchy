@@ -8,3 +8,5 @@ minio_data/
 
 .env
 *.env
+
+.venv/
