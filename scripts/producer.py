@@ -1,10 +1,9 @@
-import time
 import requests
 import json
 from confluent_kafka import Producer
 
 config = {
-  'bootstrap.servers': 'localhost:9092',
+  'bootstrap.servers': 'kafka:29092',
   'client.id': 'dotturin-bike-producer',
   'message.max.bytes': 10485760
 }
@@ -55,5 +54,4 @@ def main():
 
 if __name__ == "__main__":
     print("[*] Starting Kafka producer...")
-
     main()

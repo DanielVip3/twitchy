@@ -1,13 +1,23 @@
+# Terraform
 .terraform/
 *.tfstate
 *.tfstate.backup
 .terraform.lock.hcl
 
-.docker_volumes/
-minio_data/
+# Spark cache
 spark_dependencies/
 
+# Airflow
+logs/
+plugins/
+
+# Environment variables
 .env
 *.env
 
+# Python virtual env
 .venv/
+
+__pycache__
+.docker_volumes/
+minio_data/
