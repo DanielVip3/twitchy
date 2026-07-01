@@ -3,7 +3,7 @@ x-airflow-common:
   build:
     context: .
     dockerfile: Dockerfile.airflow
-  image: dott-airflow
+  image: dotturin-airflow
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -19,6 +19,8 @@ x-airflow-common:
     - ./airflow/logs:/opt/airflow/logs
     - ./scripts:/opt/airflow/scripts
   user: "${AIRFLOW_UID}:0"
+  networks:
+    - pipeline_net
   depends_on:
     postgres:
       condition: service_healthy
@@ -38,7 +40,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-  
+    networks:
+      - pipeline_net
+ 
   airflow-init:
     <<: *airflow-common
     container_name: airflow-init
@@ -98,6 +102,8 @@ services:
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
+    networks:
+      - pipeline_net
 
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -121,6 +127,8 @@ services:
       CLUSTER_ID: 'kmJjTkTbQQ2UhU4nA2CRDQ'
     volumes:
       - kafka_data:/var/lib/kafka/data
+    networks:
+      - pipeline_net
 
   # Init container to initialize Kafka topic before running consumer in Spark
   kafka-init-topics:
@@ -136,31 +144,64 @@ services:
         source: ./create_topic.sh
         target: /create_topic.sh
     init: true
+    networks:
+      - pipeline_net
 
-  spark:
+  spark-master:
     build:
       context: .
       dockerfile: Dockerfile.spark
-    image: dott-spark
-    container_name: spark
-    user: root
-    depends_on:
-      - kafka-init-topics
-      - minio
+    container_name: spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    environment:
+      - SPARK_MODE=master
     ports:
-      - "4040:4040" # web UI port
+      - "7077:7077"
+      - "8081:8080"
+    networks:
+      - pipeline_net
+
+  spark-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    container_name: spark-worker
+    depends_on:
+      - spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      - SPARK_MODE=worker
+    ports:
+      - "8082:8081"
+    networks:
+      - pipeline_net
+
+  # Init container to run consumer (bronze) in Spark Streaming
+  spark-stream-init:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
     volumes:
       - .:/app
-      - ./spark_dependencies/.ivy2:/app/spark_dependencies/.ivy2
     working_dir: /app
     command: >
       /opt/spark/bin/spark-submit
-      --conf "spark.driver.extraJavaOptions=-Divy.home=/app/spark_dependencies/.ivy2"
-      --conf "spark.executor.extraJavaOptions=-Divy.home=/app/spark_dependencies/.ivy2"
-      --packages org.apache.spark:spark-sql-kafka-0-10_2.13:4.1.2,org.apache.hadoop:hadoop-aws:3.4.0,com.amazonaws:aws-java-sdk-bundle:1.12.262 
+      --master spark://spark-master:7077
       /app/scripts/consumer.py
+    depends_on:
+      - spark-master
+      - spark-worker
+      - kafka-init-topics
+      - minio
+    restart: "no"
+    networks:
+      - pipeline_net
 
 volumes:
   minio_data:
   kafka_data:
   postgres_data:
+
+networks:
+  pipeline_net:
+    driver: bridge

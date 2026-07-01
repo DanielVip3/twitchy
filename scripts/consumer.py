@@ -7,6 +7,7 @@ load_dotenv()
 # Initialize Spark session
 spark = SparkSession.builder \
   .appName("DotTurinStreamingConsumer") \
+  .master("spark://spark-master:7077") \
   .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
   .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
   .config("spark.hadoop.fs.s3a.access.key", os.environ.get("MINIO_ROOT_USER")) \
