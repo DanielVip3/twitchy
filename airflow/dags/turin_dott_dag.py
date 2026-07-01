@@ -1,6 +1,7 @@
 import pendulum
 from datetime import timedelta
 from airflow.sdk import dag, task
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
 default_args = {
   'owner': 'root',
@@ -28,4 +29,21 @@ def turin_dott_api_ingestion_dag():
   # Run the producer Python script
   trigger_producer()
 
+@dag(
+  dag_id='turin_dott_silver_transformation',
+  default_args=default_args,
+  description='Batch transformation (bronze to silver) every 30 minutes',
+  schedule='*/30 * * * *',
+  start_date=pendulum.datetime(2026, 6, 30, tz="UTC"),
+  catchup=False
+)
+def turin_dott_silver_dag():
+  run_silver = SparkSubmitOperator(
+    task_id='run_silver',
+    application='/opt/airflow/scripts/transform_silver.py',
+    conn_id='spark_default',
+    verbose=True
+  )
+
 turin_dott_api_ingestion_dag()
+turin_dott_silver_dag()

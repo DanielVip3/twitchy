@@ -1,3 +1,4 @@
 requests
 confluent-kafka
 python-dotenv
+apache-airflow[apache-spark]
