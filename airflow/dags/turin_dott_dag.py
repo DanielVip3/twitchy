@@ -1,7 +1,10 @@
+import os
 import pendulum
 from datetime import timedelta
 from airflow.sdk import dag, task
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+
+SPARK_APP_CORES = os.environ.get("SPARK_APP_CORES", "1")
 
 default_args = {
   'owner': 'root',
@@ -42,6 +45,9 @@ def turin_dott_silver_dag():
     task_id='run_silver',
     application='/opt/airflow/scripts/transform_silver.py',
     conn_id='spark_default',
+    conf={
+      'spark.cores.max': SPARK_APP_CORES
+    },
     verbose=True
   )
 

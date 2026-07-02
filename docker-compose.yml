@@ -197,8 +197,9 @@ services:
       - .:/app
     working_dir: /app
     command: >
-      /opt/spark/bin/spark-submit
-      --master spark://spark-master:7077
+      /opt/spark/bin/spark-submit 
+      --master spark://spark-master:7077 
+      --conf spark.cores.max=${SPARK_APP_CORES} 
       /app/scripts/consumer.py
     depends_on:
       - spark-master
