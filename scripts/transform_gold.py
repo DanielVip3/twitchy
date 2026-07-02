@@ -1,5 +1,5 @@
 from common import get_spark_session
-from pyspark.sql.functions import col, hour, count, sum, avg, when
+from pyspark.sql.functions import col, hour, count_distinct, sum, avg, when
 
 # Initialize Spark session
 spark = get_spark_session("DotTurinTransformSilverToGold")
@@ -20,8 +20,8 @@ print("[*] Aggregating fleet by date and hour...")
 gold_hourly_fleet_df = silver_with_hour_df \
   .groupBy("year", "month", "day", "hour") \
   .agg(
-    count("bike_id").alias("total_bikes"),
-    sum(when((col("is_reserved") == False) & (col("is_disabled") == False), 1).otherwise(0)).alias("available_bikes"),
+    count_distinct("bike_id").alias("total_bikes"),
+    count_distinct(when((col("is_reserved") == False) & (col("is_disabled") == False), col("bike_id")).otherwise(None)).alias("available_bikes"),
     avg("current_fuel_percent").alias("average_fuel_percent")
   )
 
