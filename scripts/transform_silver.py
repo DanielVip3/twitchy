@@ -1,14 +1,16 @@
 from common import get_spark_session
 from haversine import haversine
 from pyspark.sql.types import (
-    StructType, StructField, StringType, DoubleType, TimestampType
+    StructType, StructField, StringType, IntegerType, DoubleType, TimestampType
 )
 from pyspark.sql.streaming.state import GroupState, GroupStateTimeout
 import pandas as pd
 
-NOISE_THRESHOLD_M = 25.0    # under 25m distance, the bike is considered still (GPS can jitter)
-MAX_MISSING_HOURS = 6       # after 6 hours of no updates, the bike is considered "missing"
-POLL_TIMEOUT_MINUTES = 7    # every 7 minutes we check for the state of bikes (the bronze ingests every 3 minutes)
+NOISE_THRESHOLD_METERS = 300.0    # under 300m distance, the bike is considered still (GPS can jitter)
+NOISE_THRESHOLD_DURATION = 2      # under 2 minutes, the bike is considered still
+NOISE_THRESHOLD_SPEED_KM_H = 4    # under 4 km/h, the bike is considered still
+MAX_MISSING_HOURS = 6             # after 6 hours of missing, the bike is considered abandoned
+POLL_TIMEOUT_MINUTES = 7          # every 7 minutes we check for the state of bikes (the bronze ingests every 3 minutes)
 
 spark = get_spark_session("DotTurinSilverTrips")
 spark.conf.set("spark.sql.execution.arrow.pyspark.enabled", "false")
@@ -19,14 +21,14 @@ trips_schema = StructType([
   StructField("vehicle_type_id", StringType()),
   StructField("start_ts", TimestampType()),
   StructField("end_ts", TimestampType()),
+  StructField("duration_s", IntegerType()),
   StructField("start_lat", DoubleType()),
   StructField("start_lon", DoubleType()),
   StructField("end_lat", DoubleType()),
   StructField("end_lon", DoubleType()),
   StructField("distance_m", DoubleType()),
   StructField("fuel_start", DoubleType()),
-  StructField("fuel_end", DoubleType()),
-  StructField("trip_type", StringType()), # trip_type is either "user_trip" or "rebalancing_or_glitch"
+  StructField("fuel_end", DoubleType())
 ])
 trips_columns = [f.name for f in trips_schema.fields]
 
@@ -95,21 +97,30 @@ def update_bike_state(grouping_key, dfs, state: GroupState):
         # It means that a trip correctly happened within the MAX_MISSING_HOURS hours limit.
         if status == "missing":
           dist = haversine((old[7], old[8]), (row["lat"], row["lon"]), unit='m')
+          duration_s = (row["last_reported"] - old[6]).total_seconds()
+          duration_m = duration_s / 60.0
+          if duration_s == 0 or duration_m == 0:
+            avg_speed_km_h = 0
+          else:
+            avg_speed_km_h = (dist / 1000.0) / (duration_m / 60.0)
 
-          trips.append({
-            "bike_id": bike_id,
-            "vehicle_type_id": row["vehicle_type_id"],
-            "start_ts": old[6],
-            "end_ts": row["last_reported"],
-            "start_lat": old[7],
-            "start_lon": old[8],
-            "end_lat": row["lat"],
-            "end_lon": row["lon"],
-            "distance_m": dist,
-            "fuel_start": old[9],
-            "fuel_end": row["current_fuel_percent"],
-            "trip_type": "user_trip",
-          })
+          # A trip happens only if the distance and duration are enough to not
+          # be noise or GPS jitter.
+          if dist > NOISE_THRESHOLD_METERS and duration_m > NOISE_THRESHOLD_DURATION and avg_speed_km_h > NOISE_THRESHOLD_SPEED_KM_H:
+            trips.append({
+              "bike_id": bike_id,
+              "vehicle_type_id": row["vehicle_type_id"],
+              "start_ts": old[6],
+              "end_ts": row["last_reported"],
+              "duration_s": duration_s,
+              "start_lat": old[7],
+              "start_lon": old[8],
+              "end_lat": row["lat"],
+              "end_lon": row["lon"],
+              "distance_m": dist,
+              "fuel_start": old[9],
+              "fuel_end": row["current_fuel_percent"]
+            })
 
           state.update((
             "active", row["last_reported"], row["lat"], row["lon"],
@@ -118,25 +129,31 @@ def update_bike_state(grouping_key, dfs, state: GroupState):
           ))
         
         # Case 2.3: this bike was already active, not missing
-        # It should not happen that a bike, marked as free, moves.
         else:
           dist = haversine((old[2], old[3]), (row["lat"], row["lon"]), unit='m')
+          duration_s = (row["last_reported"] - old[1]).total_seconds()
+          duration_m = duration_s / 60.0
+          if duration_s == 0 or duration_m == 0:
+            avg_speed_km_h = 0
+          else:
+            avg_speed_km_h = (dist / 1000.0) / (duration_m / 60.0)
 
-          # Check moved distance: if higher than the noise threshold, then it
-          # is a relocation (or a glitch) we must take into account.
-          # If the moved distance is lower, then we consider it GPS jitter.
-          if dist > NOISE_THRESHOLD_M:
+          # A trip happens only if the distance and duration are enough to not
+          # be noise or GPS jitter.
+          if dist > NOISE_THRESHOLD_METERS and duration_m > NOISE_THRESHOLD_DURATION and avg_speed_km_h > NOISE_THRESHOLD_SPEED_KM_H:
             trips.append({
               "bike_id": bike_id,
               "vehicle_type_id": row["vehicle_type_id"],
               "start_ts": old[1],
               "end_ts": row["last_reported"],
-              "start_lat": old[2], "start_lon": old[3],
-              "end_lat": row["lat"], "end_lon": row["lon"],
+              "duration_s": duration_s,
+              "start_lat": old[2],
+              "start_lon": old[3],
+              "end_lat": row["lat"],
+              "end_lon": row["lon"],
               "distance_m": dist,
               "fuel_start": old[4],
-              "fuel_end": row["current_fuel_percent"],
-              "trip_type": "rebalancing_or_glitch",
+              "fuel_end": row["current_fuel_percent"]
             })
           
           state.update((
