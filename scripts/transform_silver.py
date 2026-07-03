@@ -33,7 +33,7 @@ silver_df.printSchema()
 # with less than 2 hours of distance.
 silver_deduplicated_df = silver_df \
   .withWatermark("last_updated", "2 hours") \
-  .dropDuplicates(["last_updated"])
+  .dropDuplicates(["bike_id", "last_updated"])
 
 # Extraction of last updated year, month and day columns to partition later
 silver_time_df = silver_deduplicated_df \
