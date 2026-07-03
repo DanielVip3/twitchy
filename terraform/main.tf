@@ -27,14 +27,20 @@ provider "minio" {
   minio_ssl      = false
 }
 
-# Bucket for raw data
-resource "minio_s3_bucket" "dotturin-raw" {
-  bucket = "dotturin-raw"
+# Bucket for bronze data layer
+resource "minio_s3_bucket" "twitch-bronze" {
+  bucket = "twitch-bronze"
   acl    = "private"
 }
 
-# Bucket for processed data
-resource "minio_s3_bucket" "dotturin-processed" {
-  bucket = "dotturin-processed"
+# Bucket for silver data layer
+resource "minio_s3_bucket" "twitch-silver" {
+  bucket = "twitch-silver"
+  acl    = "private"
+}
+
+# Bucket for gold data layer
+resource "minio_s3_bucket" "twitch-gold" {
+  bucket = "twitch-gold"
   acl    = "private"
 }
