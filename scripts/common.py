@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, LongType, TimestampType, ArrayType
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, TimestampType, ArrayType
 
 load_dotenv()
 

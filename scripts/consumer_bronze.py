@@ -23,12 +23,12 @@ bronze_df = exploded_df.select(
   col("ingestion_ts"),
   col("stream.id").alias("stream_id"),
   col("stream.user_name"),
-  col("stream.game_name"),
-  col("stream.title"),
+  col("stream.game_name"), # can be an empty string
+  col("stream.title"), # can be an empty string
   col("stream.tags"),
   col("stream.viewer_count"),
   col("stream.started_at"),
-  col("stream.language"),
+  col("stream.language"), # ISO 639-1 language code or "other"
   col("stream.thumbnail_url")
 )
 
