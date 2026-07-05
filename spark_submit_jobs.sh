@@ -16,7 +16,7 @@ SPARK_MASTER="spark://spark-master:7077"
 JOBS_DIR="/app/jobs"
 
 echo "[*] Starting bronze ingestion..."
-/opt/spark/bin/spark-submit --master $SPARK_MASTER --conf spark.cores.max=${SPARK_APP_CORES} $JOBS_DIR/consumer_bronze.py &
+/opt/spark/bin/spark-submit --master $SPARK_MASTER --conf spark.cores.max=${SPARK_APP_CORES} --driver-memory 512m --executor-memory 512m $JOBS_DIR/consumer_bronze.py &
 BRONZE_PID=$!
 
 SILVER_JOBS=(
@@ -28,7 +28,7 @@ SILVER_JOBS=(
 for job in "${SILVER_JOBS[@]}"; do
   echo "[*] Starting silver job $job..."
   (
-  until /opt/spark/bin/spark-submit --master "$SPARK_MASTER" --conf spark.cores.max="${SPARK_APP_CORES}" --py-files "$JOBS_DIR/common.py" "$JOBS_DIR/$job"; do
+  until /opt/spark/bin/spark-submit --master "$SPARK_MASTER" --conf spark.cores.max="${SPARK_APP_CORES}" --driver-memory 512m --executor-memory 512m --py-files "$JOBS_DIR/common.py" "$JOBS_DIR/$job"; do
     echo "[X] $job crashed! Waiting 60 seconds before attempting restart..."
     sleep 60
   done
