@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS dim_game
+CREATE TABLE IF NOT EXISTS twitch.dim_game
 (
   game_id Int64,
   game_name String,

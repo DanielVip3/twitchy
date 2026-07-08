@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS dim_date
+CREATE TABLE IF NOT EXISTS twitch.dim_date
 (
   date_id UInt32,
 

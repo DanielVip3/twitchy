@@ -1,7 +1,7 @@
 from common import get_spark_session
 import os
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import col, max, sum, count, countDistinct, expr, concat, lpad
+from pyspark.sql.functions import col, max, sum, count, expr, concat, lpad
 
 # Initialize Spark session
 spark = get_spark_session("TwitchNoNameGoldHourly")
@@ -11,7 +11,6 @@ CH_PORT = "8123"
 CH_USER = os.environ.get("CLICKHOUSE_USER")
 CH_PASSWORD = os.environ.get("CLICKHOUSE_PASSWORD")
 CH_DB = os.environ.get("CLICKHOUSE_DB")
-JDBC_URL = f"jdbc:ch://{CH_HOST}:{CH_PORT}/{CH_DB}?compress=0"
 
 # Read data from silver layer streams Delta Lake
 silver_streams_df = spark.readStream \
@@ -25,13 +24,14 @@ silver_games_df = spark.read \
 
 def write_to_clickhouse(df: DataFrame, table: str):
   df.write \
-    .format("jdbc") \
-    .option("url", JDBC_URL) \
-    .option("dbtable", table) \
+    .format("clickhouse") \
+    .option("host", CH_HOST) \
+    .option("protocol", "http") \
+    .option("http_port", CH_PORT) \
+    .option("database", CH_DB) \
+    .option("table", table) \
     .option("user", CH_USER) \
     .option("password", CH_PASSWORD) \
-    .option("driver", "com.clickhouse.jdbc.ClickHouseDriver") \
-    .option("batchsize", 10000) \
     .mode("append") \
     .save()
 

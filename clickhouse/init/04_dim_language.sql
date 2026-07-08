@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS dim_language
+CREATE TABLE IF NOT EXISTS twitch.dim_language
 (
   language_id Int64,
   language String,

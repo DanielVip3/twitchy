@@ -1,4 +1,4 @@
-CREATE TABLE fact_stream_hourly
+CREATE TABLE IF NOT EXISTS twitch.fact_stream_hourly
 (
   /* Dimensions */
   date_id UInt32,

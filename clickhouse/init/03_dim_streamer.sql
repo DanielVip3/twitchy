@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS dim_streamer
+CREATE TABLE IF NOT EXISTS twitch.dim_streamer
 (
   streamer_id Int64,
   user_name String,
