@@ -1,5 +1,4 @@
 TWITCH_PURPLE = "#9146FF"
-ACCENT = "#00C2A8"
 
 QUADRANT_COLORS = {
   "Hidden gem": "#00C2A8",

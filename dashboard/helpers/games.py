@@ -71,24 +71,25 @@ def keyword_frequency(games: pl.DataFrame, n: int) -> pl.DataFrame:
   return _category_frequency(games, "keywords", "keyword", n)
 
 
-def release_year_trend(games: pl.DataFrame) -> pl.DataFrame:
+def release_period_trend(games: pl.DataFrame, bin_size: int = 5) -> pl.DataFrame:
   """
-  Returns number of tracked games and average rating per release year.
+  Return number of games and average rating per release period (bin_size-year buckets, e.g. 2000-2004).
   """
 
   dated = games.filter(pl.col("first_release_date").is_not_null())
-
   if dated.is_empty():
     return dated
-
-  return dated \
-    .with_columns(pl.col("first_release_date").dt.year().alias("release_year")) \
-    .group_by("release_year") \
+ 
+  binned = dated.with_columns((pl.col("first_release_date").dt.year() // bin_size * bin_size).alias("period_start"))
+ 
+  trend = binned.group_by("period_start") \
     .agg(
       pl.len().alias("games_released"),
       pl.col("total_rating").mean().alias("avg_rating"),
     ) \
-    .sort("release_year")
+    .sort("period_start")
+ 
+  return trend.with_columns((pl.col("period_start").cast(pl.Utf8) + "–" + (pl.col("period_start") + bin_size - 1).cast(pl.Utf8)).alias("period"))
 
 
 def rating_vs_popularity(games: pl.DataFrame, latest_streams: pl.DataFrame) -> pl.DataFrame:

@@ -1,7 +1,7 @@
 import streamlit as st
 import components
 from helpers.streams import latest_snapshot
-from helpers.games import latest_games_snapshot, top_rated_games,theme_frequency,game_mode_frequency, player_perspective_frequency, platform_type_frequency, keyword_frequency, release_year_trend, rating_vs_popularity, rating_popularity_quadrants
+from helpers.games import latest_games_snapshot, top_rated_games,theme_frequency,game_mode_frequency, player_perspective_frequency, platform_type_frequency, keyword_frequency, release_period_trend, rating_vs_popularity, rating_popularity_quadrants
 from load_data import load_games, load_streams
 
 st.set_page_config(page_title="Game Insights", layout="wide")
@@ -39,7 +39,7 @@ components.categories(
   keyword_frequency(games, top_n)
 )
 
-components.release_timeline_chart(release_year_trend(games))
+components.release_timeline_chart(release_period_trend(games))
 
 merged = rating_vs_popularity(games, latest_streams)
 if merged.is_empty():
