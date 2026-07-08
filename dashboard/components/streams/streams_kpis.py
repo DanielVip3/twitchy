@@ -1,7 +1,7 @@
 import polars as pl
 import streamlit as st
 
-def kpis(streams: pl.DataFrame, latest: pl.DataFrame):
+def streams_kpis(streams: pl.DataFrame, latest: pl.DataFrame):
   with st.container(border=True):
     col1, col2, col3, col4 = st.columns(4)
 

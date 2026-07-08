@@ -22,6 +22,7 @@ def latest_snapshot(df: pl.DataFrame, at_time: datetime | None = None) -> pl.Dat
 
     return filtered.filter(pl.col("ingestion_ts") == pl.col("ingestion_ts").max())
 
+
 def top_games(df: pl.DataFrame, n: int) -> pl.DataFrame:
   """
   Returns the top n games by viewer count.
@@ -32,6 +33,7 @@ def top_games(df: pl.DataFrame, n: int) -> pl.DataFrame:
     .agg(pl.col("viewer_count").sum().alias("total_viewers"), pl.len().alias("streams")) \
     .sort("total_viewers", descending=True) \
     .head(n)
+
 
 def top_streamers(streams: pl.DataFrame, latest: pl.DataFrame, n: int) -> pl.DataFrame:
   """
@@ -49,8 +51,6 @@ def top_streamers(streams: pl.DataFrame, latest: pl.DataFrame, n: int) -> pl.Dat
       pl.col("viewer_count").rolling_mean(window_size=10, min_periods=1).over("stream_id").round(decimals=0).cast(pl.Int32).alias("avg_viewers_10")
     )
 
-  # print(online_streams)
-
   # Aggregate by user_name and sort by rolling mean
   return online_streams \
     .sort("viewer_count", descending=True) \
@@ -63,15 +63,18 @@ def top_streamers(streams: pl.DataFrame, latest: pl.DataFrame, n: int) -> pl.Dat
     .sort("avg_viewers_10", descending=True) \
     .head(n)
 
+
 def top_tags_by_frequency(tags: pl.DataFrame, n: int) -> pl.DataFrame:
   """
   Returns the top n tags by usage.
   """
 
-  return tags.group_by("tag_name") \
+  return tags \
+    .group_by("tag_name") \
     .agg(pl.len().alias("uses")) \
     .sort("uses", descending=True) \
     .head(n)
+
 
 def top_tags_by_viewers(tags: pl.DataFrame, streams: pl.DataFrame, n: int) -> pl.DataFrame:
   """
@@ -89,6 +92,7 @@ def top_tags_by_viewers(tags: pl.DataFrame, streams: pl.DataFrame, n: int) -> pl
     .filter(pl.col("uses") >= 5) \
     .sort("avg_viewers", descending=True) \
     .head(n)
+
 
 def format_datetime(dt: datetime) -> str:
   return dt.strftime("%B %d, %Y - %H:%M:%S")

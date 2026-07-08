@@ -1,13 +1,13 @@
 import streamlit as st
 import polars as pl
 import components
-from helpers import latest_snapshot, top_games, top_streamers, top_tags_by_frequency, top_tags_by_viewers, format_datetime
+from helpers.streams import latest_snapshot, top_games, top_streamers, top_tags_by_frequency, top_tags_by_viewers, format_datetime
 from load_data import load_streams, load_tags, load_transitions
 from datetime import datetime, timedelta
 
 st.set_page_config(page_title="Twitch Dashboard", layout="wide")
 
-st.title("Twitch streams dashboard")
+st.title("Streams insights")
 
 with st.spinner("Loading streams..."):
   streams = load_streams()
@@ -54,9 +54,9 @@ if selected_games:
 latest = latest_snapshot(streams, selected_datetime)
 
 
-# ---- Components ---
+# ---- Components ----
 
-components.kpis(streams, latest)
+components.streams_kpis(streams, latest)
 
 components.top_games_streamers(top_games(latest, top_n), top_streamers(streams, latest, top_n))
 

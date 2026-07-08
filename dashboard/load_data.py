@@ -34,3 +34,8 @@ def load_tags() -> pl.DataFrame:
 @st.cache_data(ttl=60)
 def load_transitions() -> pl.DataFrame:
   return _read_delta("s3://twitch-silver/stream_transitions/")
+
+
+@st.cache_data(ttl=60)
+def load_games() -> pl.DataFrame:
+  return _read_delta("s3://twitch-silver/games/")

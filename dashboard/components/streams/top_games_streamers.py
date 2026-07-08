@@ -1,4 +1,4 @@
-from components.sorted_hbar import sorted_hbar
+from components.streams.sorted_hbar import sorted_hbar
 import polars as pl
 import streamlit as st
 import plotly.express as px
