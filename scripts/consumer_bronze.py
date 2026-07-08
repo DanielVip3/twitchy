@@ -6,7 +6,7 @@ spark = get_spark_session("TwitchNoNameStreamingConsumerBronze", master="spark:/
 
 # -- STREAMS TOPIC
 # Flow from Kafka to Spark
-kafka_df = spark.readStream \
+kafka_streams_df = spark.readStream \
   .format("kafka") \
   .option("kafka.bootstrap.servers", "kafka:29092") \
   .option("subscribe", TOPIC_STREAMS) \
@@ -15,12 +15,12 @@ kafka_df = spark.readStream \
   .load()
 
 # Parse JSON and explode the stream data array as rows into the main table
-exploded_df = kafka_df.selectExpr("CAST(value AS STRING) as json_payload", "timestamp as ingestion_ts") \
+exploded_streams_df = kafka_streams_df.selectExpr("CAST(value AS STRING) as json_payload", "timestamp as ingestion_ts") \
   .withColumn("parsed_json", from_json(col("json_payload"), stream_schema)) \
   .withColumn("stream", explode(col("parsed_json.data")))
 
 # Select all the stream columns and the ingestion timestamp
-bronze_df = exploded_df.select(
+bronze_streams_df = exploded_streams_df.select(
   col("ingestion_ts"),
   col("stream.id").alias("stream_id"),
   col("stream.user_name"),
@@ -34,18 +34,19 @@ bronze_df = exploded_df.select(
 )
 
 # Extraction of ingestion year, month and day columns to partition later
-bronze_time_df = bronze_df \
+bronze_streams_time_df = bronze_streams_df \
   .withColumn("year", year(col("ingestion_ts"))) \
   .withColumn("month", month(col("ingestion_ts"))) \
   .withColumn("day", day(col("ingestion_ts")))
 
 # Write stream in Delta Lake format in bucket 'twitch-bronze'
-query = bronze_time_df.writeStream \
+query = bronze_streams_time_df.writeStream \
   .outputMode("append") \
   .format("delta") \
   .partitionBy("year", "month", "day") \
   .option("checkpointLocation", "s3a://twitch-bronze/checkpoints/streams/") \
   .start("s3a://twitch-bronze/streams/")
+
 
 
 # -- GAMES TOPIC
@@ -84,11 +85,11 @@ bronze_games_df = exploded_games_df.select(
 )
 
 # Write stream in Delta Lake format in bucket 'twitch-bronze' (not partitioned)
-query = bronze_time_df.writeStream \
+query = bronze_games_df.writeStream \
   .outputMode("append") \
   .format("delta") \
   .option("checkpointLocation", "s3a://twitch-bronze/checkpoints/games/") \
   .start("s3a://twitch-bronze/games/")
 
 
-query.awaitTermination()
+spark.streams.awaitAnyTermination()
