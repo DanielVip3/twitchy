@@ -148,7 +148,7 @@ Additional details on the meaning and values of the fields are available in the 
 
 ## Silver layer (Delta Lake)
 
-Bronze data cleaned up, flattened, and split into purpose-specific tables. Tables are generated incrementally and independently from each other.
+Bronze data cleaned up, flattened, and split into purpose-specific tables, which are generated incrementally and independently from each other.
 
 ### `twitch-silver/streams`
 
@@ -174,7 +174,7 @@ Tags exploded out of bronze streams into their own table.
 
 ### `twitch-silver/stream_transitions`
 
-Contains events detected through stateful processing (over two consecutive polls), that can either be game (category) changes or live stream title changes. 
+Contains events detected through stateful processing (over two consecutive polls), that can either be game (category) changes or live stream title changes.  
 **Grain:** one row per event per stream per poll.
 
 | Column | Type | Notes |
@@ -190,7 +190,7 @@ A single poll can produce **two** rows for the same stream if both the game and 
 
 ### `twitch-silver/games`
 
-Similar to the bronze games table, but with the IGDB struct flattened out into plain columns and array-of-struct fields reduced to array-of-string.
+Similar to the bronze games table, but with the IGDB struct flattened out into plain columns and array-of-struct fields reduced to array-of-string.  
 **Grain:** one row per (unique) game per poll.
 
 | Field | Type |
@@ -227,11 +227,11 @@ erDiagram
   fact_stream_hourly }o--|| dim_language : "broadcast in"
 
   fact_stream_hourly {
-    Int64 game_id FK "dimension"
-    UInt32 date_id FK "dimension"
-    Int64 streamer_id FK "dimension"
-    Int64 language_id FK "dimension"
-    UInt8 time_hour "degenerate dimension"
+    Int64 game_id PK,FK "dimension"
+    UInt32 date_id PK,FK "dimension"
+    Int64 streamer_id PK,FK "dimension"
+    Int64 language_id PK,FK "dimension"
+    UInt8 time_hour PK "degenerate dimension"
     Int64 max_viewers "metric"
     Int64 sum_viewers "metric"
     Int32 count_observations "metric"
